@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="fragments/layout :: head('Admin Dashboard')">
+    <title>Admin Dashboard - Coffee Shop Management</title>
+</head>
+<body>
+    <div th:replace="fragments/layout :: navbar"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div th:replace="fragments/layout :: sidebar-admin"></div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Admin Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <a href="/admin/reports" class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-chart-line me-1"></i> Reports
+                            </a>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle">
+                            <i class="fas fa-calendar me-1"></i> Today
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card dashboard-card h-100 slide-in">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Daily Revenue
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">$1,250</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light small text-muted">Updated just now</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card dashboard-card h-100 slide-in" style="animation-delay: 0.1s;">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Orders Today
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">42</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-receipt fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light small text-muted">Updated just now</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card dashboard-card h-100 slide-in" style="animation-delay: 0.2s;">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                            Active Tables
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">12/15</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-chair fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light small text-muted">Updated just now</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-lg-3 col-md-6 mb-4">
+                        <div class="card dashboard-card h-100 slide-in" style="animation-delay: 0.3s;">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Staff On Duty
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">8</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-users fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-footer bg-light small text-muted">Updated just now</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Recent Orders -->
+                    <div class="col-lg-8 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold">Recent Orders</h6>
+                                <a href="/admin/orders" class="btn btn-sm btn-primary">View All</a>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover table-coffee">
+                                        <thead>
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Table</th>
+                                                <th>Server</th>
+                                                <th>Total</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="order : ${recentOrders}">
+                                                <td th:text="${order.orderNumber}">ORD-20220515-1234</td>
+                                                <td th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</td>
+                                                <td th:text="${order.server.fullName}">John Doe</td>
+                                                <td th:text="'$' + ${order.total}">$24.99</td>
+                                                <td>
+                                                    <span th:class="'status-badge status-' + ${#strings.toLowerCase(order.status)}" 
+                                                          th:text="${order.status}">PENDING</span>
+                                                </td>
+                                                <td>
+                                                    <a th:href="@{/admin/orders/{id}(id=${order.id})}" class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye"></i>
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Best Selling Products -->
+                    <div class="col-lg-4 mb-4">
+                        <div class="card shadow mb-4">
+                            <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
+                                <h6 class="m-0 font-weight-bold">Best Selling Products</h6>
+                                <a href="/admin/reports" class="btn btn-sm btn-primary">View Report</a>
+                            </div>
+                            <div class="card-body">
+                                <div class="list-group">
+                                    <a href="#" class="list-group-item list-group-item-action" th:each="product : ${bestSellingProducts}">
+                                        <div class="d-flex w-100 justify-content-between">
+                                            <h6 class="mb-1" th:text="${product.name}">Cappuccino</h6>
+                                            <small th:text="'$' + ${product.price}">$4.99</small>
+                                        </div>
+                                        <p class="mb-1 text-muted small" th:text="${product.category.name}">Coffee</p>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <div th:replace="fragments/layout :: footer"></div>
+</body>
+</html>

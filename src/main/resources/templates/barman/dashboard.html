@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="fragments/layout :: head('Barman Dashboard')">
+    <title>Barman Dashboard - Coffee Shop Management</title>
+</head>
+<body>
+    <div th:replace="fragments/layout :: navbar"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div th:replace="fragments/layout :: sidebar-barman"></div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Barman Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Order Tabs -->
+                <ul class="nav nav-tabs mb-4" id="orderTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active position-relative" id="pending-tab" data-bs-toggle="tab" 
+                                data-bs-target="#pending" type="button" role="tab" aria-selected="true">
+                            Pending
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                  th:text="${pendingOrders.size()}">3</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link position-relative" id="in-progress-tab" data-bs-toggle="tab" 
+                                data-bs-target="#in-progress" type="button" role="tab" aria-selected="false">
+                            In Progress
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-primary"
+                                  th:text="${inProgressOrders.size()}">2</span>
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link position-relative" id="ready-tab" data-bs-toggle="tab" 
+                                data-bs-target="#ready" type="button" role="tab" aria-selected="false">
+                            Ready for Pickup
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success"
+                                  th:text="${readyOrders.size()}">1</span>
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="orderTabContent">
+                    <!-- Pending Orders -->
+                    <div class="tab-pane fade show active" id="pending" role="tabpanel" aria-labelledby="pending-tab">
+                        <div class="row">
+                            <div class="col-md-6 col-xl-4 mb-4" th:each="order : ${pendingOrders}">
+                                <div class="card shadow-sm border-left-primary h-100 slide-in">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0 text-primary">
+                                            <i class="fas fa-receipt me-2"></i>
+                                            <span th:text="${order.orderNumber}">ORD-20220515-1234</span>
+                                        </h5>
+                                        <span class="badge bg-warning text-dark">Pending</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Table:</strong> 
+                                            <span th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Server:</strong> 
+                                            <span th:text="${order.server.fullName}">John Doe</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Time:</strong> 
+                                            <span th:text="${#temporals.format(order.createdAt, 'HH:mm')}">14:30</span>
+                                            (<span th:text="${#temporals.format(order.createdAt, 'dd/MM')}">15/05</span>)
+                                        </p>
+                                        
+                                        <hr>
+                                        
+                                        <h6>Items:</h6>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center p-2"
+                                                th:each="item : ${order.items}">
+                                                <div>
+                                                    <span th:text="${item.quantity} + 'x ' + ${item.product.name}">2x Cappuccino</span>
+                                                    <small class="d-block text-muted" th:if="${item.specialInstructions}"
+                                                           th:text="${item.specialInstructions}">Extra hot</small>
+                                                </div>
+                                                <span class="badge bg-light text-dark"
+                                                      th:text="${item.product.preparationTimeInMinutes} + ' min'">5 min</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="card-footer bg-white border-0">
+                                        <form th:action="@{/barman/orders/{id}/status(id=${order.id})}" method="post" class="d-grid">
+                                            <input type="hidden" name="status" value="IN_PROGRESS">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i class="fas fa-play-circle me-2"></i> Start Preparation
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12" th:if="${pendingOrders.isEmpty()}">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> No pending orders at the moment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- In Progress Orders -->
+                    <div class="tab-pane fade" id="in-progress" role="tabpanel" aria-labelledby="in-progress-tab">
+                        <div class="row">
+                            <div class="col-md-6 col-xl-4 mb-4" th:each="order : ${inProgressOrders}">
+                                <div class="card shadow-sm border-left-info h-100 slide-in">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0 text-info">
+                                            <i class="fas fa-receipt me-2"></i>
+                                            <span th:text="${order.orderNumber}">ORD-20220515-1234</span>
+                                        </h5>
+                                        <span class="badge bg-info text-dark">In Progress</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Table:</strong> 
+                                            <span th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Server:</strong> 
+                                            <span th:text="${order.server.fullName}">John Doe</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Time:</strong> 
+                                            <span th:text="${#temporals.format(order.createdAt, 'HH:mm')}">14:30</span>
+                                            (<span th:text="${#temporals.format(order.createdAt, 'dd/MM')}">15/05</span>)
+                                        </p>
+                                        
+                                        <hr>
+                                        
+                                        <h6>Items:</h6>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center p-2"
+                                                th:each="item : ${order.items}">
+                                                <div>
+                                                    <span th:text="${item.quantity} + 'x ' + ${item.product.name}">2x Cappuccino</span>
+                                                    <small class="d-block text-muted" th:if="${item.specialInstructions}"
+                                                           th:text="${item.specialInstructions}">Extra hot</small>
+                                                </div>
+                                                <div>
+                                                    <select class="form-select form-select-sm item-status-select"
+                                                            th:data-order-id="${order.id}"
+                                                            th:data-item-id="${item.id}">
+                                                        <option value="PENDING" th:selected="${item.status.name() == 'PENDING'}">Pending</option>
+                                                        <option value="IN_PROGRESS" th:selected="${item.status.name() == 'IN_PROGRESS'}">In Progress</option>
+                                                        <option value="READY" th:selected="${item.status.name() == 'READY'}">Ready</option>
+                                                    </select>
+                                                </div>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="card-footer bg-white border-0">
+                                        <form th:action="@{/barman/orders/{id}/status(id=${order.id})}" method="post" class="d-grid">
+                                            <input type="hidden" name="status" value="READY">
+                                            <button type="submit" class="btn btn-success">
+                                                <i class="fas fa-check-circle me-2"></i> Mark as Ready
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12" th:if="${inProgressOrders.isEmpty()}">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> No orders in progress at the moment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Ready Orders -->
+                    <div class="tab-pane fade" id="ready" role="tabpanel" aria-labelledby="ready-tab">
+                        <div class="row">
+                            <div class="col-md-6 col-xl-4 mb-4" th:each="order : ${readyOrders}">
+                                <div class="card shadow-sm border-left-success h-100 slide-in">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0 text-success">
+                                            <i class="fas fa-receipt me-2"></i>
+                                            <span th:text="${order.orderNumber}">ORD-20220515-1234</span>
+                                        </h5>
+                                        <span class="badge bg-success">Ready</span>
+                                    </div>
+                                    <div class="card-body">
+                                        <p class="card-text">
+                                            <strong>Table:</strong> 
+                                            <span th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Server:</strong> 
+                                            <span th:text="${order.server.fullName}">John Doe</span>
+                                        </p>
+                                        <p class="card-text">
+                                            <strong>Time:</strong> 
+                                            <span th:text="${#temporals.format(order.createdAt, 'HH:mm')}">14:30</span>
+                                            (<span th:text="${#temporals.format(order.createdAt, 'dd/MM')}">15/05</span>)
+                                        </p>
+                                        
+                                        <hr>
+                                        
+                                        <h6>Items:</h6>
+                                        <ul class="list-group list-group-flush">
+                                            <li class="list-group-item d-flex justify-content-between align-items-center p-2"
+                                                th:each="item : ${order.items}">
+                                                <div>
+                                                    <span th:text="${item.quantity} + 'x ' + ${item.product.name}">2x Cappuccino</span>
+                                                    <small class="d-block text-muted" th:if="${item.specialInstructions}"
+                                                           th:text="${item.specialInstructions}">Extra hot</small>
+                                                </div>
+                                                <span class="badge bg-success">Ready</span>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div class="card-footer bg-white border-0">
+                                        <div class="alert alert-success mb-0">
+                                            <i class="fas fa-bell me-2"></i> 
+                                            Server has been notified. Waiting for pickup.
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-12" th:if="${readyOrders.isEmpty()}">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i> No orders ready for pickup at the moment.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <!-- Form for Item Status Update -->
+    <form id="itemStatusForm" method="post" style="display:none;">
+        <input type="hidden" name="status" id="itemStatusInput">
+    </form>
+    
+    <div th:replace="fragments/layout :: footer"></div>
+    
+    <script>
+        // Item status update
+        document.addEventListener('DOMContentLoaded', function() {
+            const statusSelects = document.querySelectorAll('.item-status-select');
+            statusSelects.forEach(select => {
+                select.addEventListener('change', function() {
+                    const orderId = this.getAttribute('data-order-id');
+                    const itemId = this.getAttribute('data-item-id');
+                    const status = this.value;
+                    
+                    const form = document.getElementById('itemStatusForm');
+                    form.action = `/barman/orders/${orderId}/items/${itemId}/status`;
+                    
+                    const statusInput = document.getElementById('itemStatusInput');
+                    statusInput.value = status;
+                    
+                    form.submit();
+                });
+            });
+            
+            // Refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    location.reload();
+                });
+            }
+            
+            // Auto refresh every 30 seconds
+            setInterval(function() {
+                location.reload();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

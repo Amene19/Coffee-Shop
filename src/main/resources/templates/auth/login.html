@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout :: head('Login')">
+    <title>Login - Coffee Shop Management</title>
+</head>
+<body class="bg-light">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-6 col-lg-5">
+                <div class="card shadow-lg rounded-3 overflow-hidden slide-in">
+                    <div class="card-header bg-primary text-white text-center py-3">
+                        <h3 class="mb-0">
+                            <i class="fas fa-coffee me-2"></i> Coffee Service
+                        </h3>
+                    </div>
+                    <div class="card-body p-4">
+                        <h4 class="text-center mb-4">Sign In</h4>
+                        
+                        <div th:if="${param.error}" class="alert alert-danger">
+                            <i class="fas fa-exclamation-circle me-2"></i>
+                            Invalid username or password
+                        </div>
+                        
+                        <div th:if="${param.logout}" class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            You have been logged out
+                        </div>
+                        
+                        <form th:action="@{/login}" method="post">
+                            <div class="mb-3">
+                                <label for="username" class="form-label">Username</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-user"></i>
+                                    </span>
+                                    <input type="text" id="username" name="username" class="form-control"
+                                           placeholder="Enter your username" required autofocus>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label for="password" class="form-label">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="fas fa-lock"></i>
+                                    </span>
+                                    <input type="password" id="password" name="password" class="form-control"
+                                           placeholder="Enter your password" required>
+                                </div>
+                            </div>
+                            
+                            <div class="form-check mb-3">
+                                <input class="form-check-input" type="checkbox" name="remember-me" id="remember-me">
+                                <label class="form-check-label" for="remember-me">
+                                    Remember me
+                                </label>
+                            </div>
+                            
+                            <div class="d-grid">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-sign-in-alt me-2"></i> Login
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-center py-3 bg-light">
+                        <p class="mb-0 text-muted">Coffee Service Management System</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div th:replace="fragments/layout :: footer"></div>
+</body>
+</html>

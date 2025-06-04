@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="fragments/layout :: head('Server Dashboard')">
+    <title>Server Dashboard - Coffee Shop Management</title>
+</head>
+<body>
+    <div th:replace="fragments/layout :: navbar"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div th:replace="fragments/layout :: sidebar-server"></div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Server Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <a href="/server/orders/new" class="btn btn-sm btn-primary me-2">
+                            <i class="fas fa-plus me-1"></i> New Order
+                        </a>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Alerts -->
+                <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${param.success}">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span th:text="${param.success}">Operation successful!</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                
+                <!-- Top Section with Ready Orders -->
+                <div class="card mb-4 border-left-success shadow-sm" th:if="${!readyOrders.isEmpty()}">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="mb-0">
+                            <i class="fas fa-bell me-2"></i> Orders Ready for Pickup
+                        </h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Order #</th>
+                                        <th>Table</th>
+                                        <th>Items</th>
+                                        <th>Ordered At</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="order : ${readyOrders}" class="slide-in">
+                                        <td th:text="${order.orderNumber}">ORD-20220515-1234</td>
+                                        <td th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</td>
+                                        <td>
+                                            <span th:each="item, iterStat : ${order.items}">
+                                                <span th:text="${item.quantity} + 'x ' + ${item.product.name}"></span>
+                                                <span th:if="${!iterStat.last}">, </span>
+                                            </span>
+                                        </td>
+                                        <td th:text="${#temporals.format(order.createdAt, 'HH:mm')}">14:30</td>
+                                        <td>
+                                            <form th:action="@{/server/orders/{id}/deliver(id=${order.id})}" method="post" 
+                                                  class="d-inline">
+                                                <button type="submit" class="btn btn-sm btn-success">
+                                                    <i class="fas fa-check-circle me-1"></i> Deliver
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Main Content - Two column layout -->
+                <div class="row">
+                    <!-- My Tables -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-chair me-2"></i> My Tables
+                                </h5>
+                                <a href="/server/tables" class="btn btn-sm btn-outline-primary">All Tables</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Table #</th>
+                                                <th>Status</th>
+                                                <th>Capacity</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="table : ${assignedTables}" class="slide-in">
+                                                <td th:text="${table.tableNumber}">5</td>
+                                                <td>
+                                                    <span th:class="'badge bg-' + 
+                                                        ${table.status.name() == 'AVAILABLE' ? 'success' : 
+                                                         table.status.name() == 'OCCUPIED' ? 'warning' : 
+                                                         table.status.name() == 'RESERVED' ? 'info' : 'secondary'}" 
+                                                        th:text="${table.status}">OCCUPIED</span>
+                                                </td>
+                                                <td th:text="${table.capacity}">4</td>
+                                                <td>
+                                                    <a th:href="@{/server/tables/{id}(id=${table.id})}" class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye me-1"></i> View
+                                                    </a>
+                                                    <a th:href="@{/server/orders/new(tableId=${table.id})}" 
+                                                       class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-plus me-1"></i> Order
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr th:if="${assignedTables.isEmpty()}">
+                                                <td colspan="4" class="text-center py-3">
+                                                    No tables assigned to you yet.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- My Recent Orders -->
+                    <div class="col-md-6 mb-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-receipt me-2"></i> My Recent Orders
+                                </h5>
+                                <a href="/server/orders" class="btn btn-sm btn-outline-primary">All Orders</a>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Table</th>
+                                                <th>Status</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="order : ${myOrders}" class="slide-in">
+                                                <td th:text="${order.orderNumber}">ORD-20220515-1234</td>
+                                                <td th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</td>
+                                                <td>
+                                                    <span th:class="'status-badge status-' + ${#strings.toLowerCase(order.status)}" 
+                                                          th:text="${order.status}">PENDING</span>
+                                                </td>
+                                                <td th:text="'$' + ${order.total}">$24.99</td>
+                                                <td>
+                                                    <a href="#" class="btn btn-sm btn-info">
+                                                        <i class="fas fa-eye me-1"></i> View
+                                                    </a>
+                                                    <form th:if="${order.status.name() == 'READY'}" 
+                                                          th:action="@{/server/orders/{id}/deliver(id=${order.id})}" 
+                                                          method="post" class="d-inline">
+                                                        <button type="submit" class="btn btn-sm btn-success">
+                                                            <i class="fas fa-check-circle me-1"></i> Deliver
+                                                        </button>
+                                                    </form>
+                                                </td>
+                                            </tr>
+                                            <tr th:if="${myOrders.isEmpty()}">
+                                                <td colspan="5" class="text-center py-3">
+                                                    No recent orders found.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <div th:replace="fragments/layout :: footer"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    location.reload();
+                });
+            }
+            
+            // Auto refresh every 30 seconds
+            setInterval(function() {
+                location.reload();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>

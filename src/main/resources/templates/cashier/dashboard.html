@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head th:replace="fragments/layout :: head('Cashier Dashboard')">
+    <title>Cashier Dashboard - Coffee Shop Management</title>
+</head>
+<body>
+    <div th:replace="fragments/layout :: navbar"></div>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div th:replace="fragments/layout :: sidebar-cashier"></div>
+            
+            <!-- Main Content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 py-4">
+                <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pb-2 mb-3 border-bottom">
+                    <h1 class="h2">Cashier Dashboard</h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="refreshBtn">
+                            <i class="fas fa-sync-alt me-1"></i> Refresh
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Alerts -->
+                <div class="alert alert-success alert-dismissible fade show" role="alert" th:if="${param.success}">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <span th:text="${param.success}">Operation successful!</span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                
+                <!-- Stats Cards -->
+                <div class="row mb-4">
+                    <div class="col-md-4 mb-4">
+                        <div class="card dashboard-card h-100 slide-in">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                                            Today's Sales
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800">$1,250</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-dollar-sign fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-4">
+                        <div class="card dashboard-card h-100 slide-in" style="animation-delay: 0.1s;">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                            Waiting for Payment
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${unpaidOrders.size()}">5</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-credit-card fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4 mb-4">
+                        <div class="card dashboard-card h-100 slide-in" style="animation-delay: 0.2s;">
+                            <div class="card-body">
+                                <div class="row no-gutters align-items-center">
+                                    <div class="col mr-2">
+                                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                                            Completed Orders
+                                        </div>
+                                        <div class="h5 mb-0 font-weight-bold text-gray-800" th:text="${recentlyPaidOrders.size()}">42</div>
+                                    </div>
+                                    <div class="col-auto">
+                                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <!-- Unpaid Orders -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-warning text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-money-bill-wave me-2"></i> Orders Waiting for Payment
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Table</th>
+                                                <th>Server</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="order : ${unpaidOrders}" class="slide-in">
+                                                <td th:text="${order.orderNumber}">ORD-20220515-1234</td>
+                                                <td th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</td>
+                                                <td th:text="${order.server.fullName}">John Doe</td>
+                                                <td th:text="'$' + ${order.total}">$24.99</td>
+                                                <td>
+                                                    <a th:href="@{/cashier/orders/{id}/payment(id=${order.id})}" 
+                                                       class="btn btn-sm btn-primary">
+                                                        <i class="fas fa-money-bill-wave me-1"></i> Payment
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr th:if="${unpaidOrders.isEmpty()}">
+                                                <td colspan="5" class="text-center py-3">
+                                                    No orders waiting for payment.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recently Paid Orders -->
+                    <div class="col-lg-6 mb-4">
+                        <div class="card shadow-sm h-100">
+                            <div class="card-header bg-success text-white">
+                                <h5 class="mb-0">
+                                    <i class="fas fa-check-circle me-2"></i> Recently Paid Orders
+                                </h5>
+                            </div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-hover mb-0">
+                                        <thead>
+                                            <tr>
+                                                <th>Order #</th>
+                                                <th>Table</th>
+                                                <th>Amount</th>
+                                                <th>Payment</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="order : ${recentlyPaidOrders}" class="slide-in">
+                                                <td th:text="${order.orderNumber}">ORD-20220515-1234</td>
+                                                <td th:text="${order.table != null ? order.table.tableNumber : 'N/A'}">5</td>
+                                                <td th:text="'$' + ${order.total}">$24.99</td>
+                                                <td th:text="${order.paymentMethod}">CREDIT_CARD</td>
+                                                <td>
+                                                    <a th:href="@{/cashier/orders/{id}/receipt(id=${order.id})}" 
+                                                       class="btn btn-sm btn-secondary" target="_blank">
+                                                        <i class="fas fa-file-pdf me-1"></i> Receipt
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr th:if="${recentlyPaidOrders.isEmpty()}">
+                                                <td colspan="5" class="text-center py-3">
+                                                    No recently paid orders.
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+    
+    <div th:replace="fragments/layout :: footer"></div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Refresh button
+            const refreshBtn = document.getElementById('refreshBtn');
+            if (refreshBtn) {
+                refreshBtn.addEventListener('click', function() {
+                    location.reload();
+                });
+            }
+            
+            // Auto refresh every 30 seconds
+            setInterval(function() {
+                location.reload();
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
