@@ -47,6 +47,7 @@
                                         <th>Order #</th>
                                         <th>Table</th>
                                         <th>Items</th>
+                                        <th>Server</th>
                                         <th>Ordered At</th>
                                         <th>Actions</th>
                                     </tr>
@@ -61,6 +62,7 @@
                                                 <span th:if="${!iterStat.last}">, </span>
                                             </span>
                                         </td>
+                                        <td th:text="${order.server != null ? order.server.fullName : 'N/A'}">John Doe</td>
                                         <td th:text="${#temporals.format(order.createdAt, 'HH:mm')}">14:30</td>
                                         <td>
                                             <form th:action="@{/server/orders/{id}/deliver(id=${order.id})}" method="post" 

@@ -4,9 +4,10 @@ import com.coffeeshop.management.model.Role;
 import com.coffeeshop.management.model.User;
 import com.coffeeshop.management.security.UserDetailsImpl;
 import com.coffeeshop.management.service.UserService;
+import com.coffeeshop.management.repository.RoleRepository;
 import jakarta.validation.Valid;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -22,9 +23,13 @@ import java.util.Set;
 public class AuthController {
     
     private final UserService userService;
+    private final PasswordEncoder passwordEncoder;
+    private final RoleRepository roleRepository;
     
-    public AuthController(UserService userService) {
+    public AuthController(UserService userService, PasswordEncoder passwordEncoder, RoleRepository roleRepository) {
         this.userService = userService;
+        this.passwordEncoder = passwordEncoder;
+        this.roleRepository = roleRepository;
     }
     
     @GetMapping("/login")
@@ -53,16 +58,14 @@ public class AuthController {
     }
     
     @GetMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
     public String showRegistrationForm(Model model) {
         model.addAttribute("user", new User());
         return "auth/register";
     }
     
     @PostMapping("/register")
-    @PreAuthorize("hasRole('ADMIN')")
     public String registerUser(@Valid @ModelAttribute("user") User user, BindingResult result,
-                              @ModelAttribute("roles") String[] roles,
+                              @ModelAttribute("role") String role,
                               RedirectAttributes redirectAttributes) {
         
         if (result.hasErrors()) {
@@ -79,23 +82,23 @@ public class AuthController {
             return "auth/register";
         }
         
+        // Set the selected role
         Set<Role.ERole> roleSet = new HashSet<>();
-        for (String role : roles) {
-            try {
-                roleSet.add(Role.ERole.valueOf(role));
-            } catch (IllegalArgumentException e) {
-                // Invalid role, ignore
+        try {
+            Role.ERole selectedRole = Role.ERole.valueOf(role);
+            if (selectedRole == Role.ERole.ROLE_ADMIN) {
+                result.rejectValue("role", "error.role", "Cannot register as admin");
+                return "auth/register";
             }
-        }
-        
-        // If no roles selected, default to SERVER
-        if (roleSet.isEmpty()) {
-            roleSet.add(Role.ERole.ROLE_SERVER);
+            roleSet.add(selectedRole);
+        } catch (IllegalArgumentException e) {
+            result.rejectValue("role", "error.role", "Invalid role selected");
+            return "auth/register";
         }
         
         userService.createUser(user, roleSet);
         
-        redirectAttributes.addFlashAttribute("success", "User registered successfully!");
-        return "redirect:/admin/users";
+        redirectAttributes.addFlashAttribute("success", "Registration successful! Please log in.");
+        return "redirect:/login";
     }
 }

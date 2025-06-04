@@ -26,6 +26,11 @@
                             You have been logged out
                         </div>
                         
+                        <div th:if="${success}" class="alert alert-success">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <span th:text="${success}"></span>
+                        </div>
+                        
                         <form th:action="@{/login}" method="post">
                             <div class="mb-3">
                                 <label for="username" class="form-label">Username</label>
@@ -56,10 +61,13 @@
                                 </label>
                             </div>
                             
-                            <div class="d-grid">
+                            <div class="d-grid gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="fas fa-sign-in-alt me-2"></i> Login
                                 </button>
+                                <a href="/register" class="btn btn-outline-secondary">
+                                    <i class="fas fa-user-plus me-2"></i> Create Account
+                                </a>
                             </div>
                         </form>
                     </div>

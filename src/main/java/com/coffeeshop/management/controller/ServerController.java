@@ -3,6 +3,7 @@ package com.coffeeshop.management.controller;
 import com.coffeeshop.management.model.CoffeeTable;
 import com.coffeeshop.management.model.Order;
 import com.coffeeshop.management.model.Order.OrderStatus;
+import com.coffeeshop.management.model.OrderItem;
 import com.coffeeshop.management.model.Product;
 import com.coffeeshop.management.model.User;
 import com.coffeeshop.management.security.UserDetailsImpl;
@@ -10,14 +11,20 @@ import com.coffeeshop.management.service.OrderService;
 import com.coffeeshop.management.service.ProductService;
 import com.coffeeshop.management.service.TableService;
 import com.coffeeshop.management.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 @Controller
 @RequestMapping("/server")
@@ -39,18 +46,30 @@ public class ServerController {
     
     @GetMapping("/dashboard")
     public String dashboard(@AuthenticationPrincipal UserDetailsImpl userDetails, Model model) {
+        if (userDetails == null) {
+            // Should not happen with @PreAuthorize, but as a fallback
+            return "redirect:/login";
+        }
+
         // Get current user
-        User currentUser = userService.findById(userDetails.getId())
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        
+        Optional<User> currentUserOptional = userService.findById(userDetails.getId());
+        if (!currentUserOptional.isPresent()) {
+            // User not found in database, maybe disabled or deleted
+            return "redirect:/login?logout=true";
+        }
+        User currentUser = currentUserOptional.get();
+
         // Get tables assigned to this server
         List<CoffeeTable> assignedTables = tableService.findTablesByServer(currentUser.getId());
-        
+        if (assignedTables == null) assignedTables = new ArrayList<>();
+
         // Get orders ready for delivery
         List<Order> readyOrders = orderService.findOrdersByStatus(OrderStatus.READY);
+         if (readyOrders == null) readyOrders = new ArrayList<>();
         
         // Get orders created by this server
         List<Order> myOrders = orderService.findOrdersByServer(currentUser);
+         if (myOrders == null) myOrders = new ArrayList<>();
         
         model.addAttribute("userDetails", userDetails);
         model.addAttribute("assignedTables", assignedTables);
@@ -68,84 +87,78 @@ public class ServerController {
     }
     
     @GetMapping("/tables/{id}")
-    public String viewTable(@PathVariable Long id, Model model) {
+    public String viewTableDetails(@PathVariable Long id, Model model) {
         CoffeeTable table = tableService.findById(id)
             .orElseThrow(() -> new RuntimeException("Table not found with id: " + id));
-        
-        List<Order> tableOrders = orderService.findOrdersByTable(id);
-        
         model.addAttribute("table", table);
-        model.addAttribute("tableOrders", tableOrders);
+        model.addAttribute("orders", orderService.findOrdersByTable(id));
         return "server/table-details";
     }
     
     @GetMapping("/orders/new")
-    public String showCreateOrderForm(Model model, @RequestParam(required = false) Long tableId) {
-        List<CoffeeTable> availableTables = tableService.findTablesByStatus(CoffeeTable.TableStatus.AVAILABLE);
-        List<Product> availableProducts = productService.findAvailableProducts();
-        
+    public String createOrderForm(Model model, @RequestParam(value = "tableId", required = false) Long tableId) {
+        List<Product> products = productService.findAllProducts();
+        model.addAttribute("products", products);
         model.addAttribute("order", new Order());
-        model.addAttribute("tables", availableTables);
-        model.addAttribute("products", availableProducts);
-        
-        if (tableId != null) {
-            model.addAttribute("selectedTableId", tableId);
-        }
-        
-        return "server/order-form";
+        model.addAttribute("selectedTableId", tableId);
+        model.addAttribute("tables", tableService.findAllTables());
+        return "server/create-order";
     }
-    
-    @PostMapping("/orders/save")
-    public String createOrder(@ModelAttribute Order order, 
-                            @AuthenticationPrincipal UserDetailsImpl userDetails,
-                            @RequestParam Long tableId,
-                            @RequestParam(required = false) List<Long> productIds,
-                            @RequestParam(required = false) List<Integer> quantities,
-                            @RequestParam(required = false) List<String> specialInstructions,
-                            RedirectAttributes redirectAttributes) {
+
+    @PostMapping("/orders/new")
+    public String createOrder(@ModelAttribute("order") Order order,
+                              @RequestParam(value = "productIds", required = false) List<Long> productIds,
+                              @RequestParam(value = "quantities", required = false) List<Integer> quantities,
+                              @RequestParam("tableId") Long tableId,
+                              @AuthenticationPrincipal UserDetailsImpl userDetails,
+                              RedirectAttributes redirectAttributes) {
         
-        // Set the server
-        User currentUser = userService.findById(userDetails.getId())
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        order.setServer(currentUser);
-        
-        // Set the table
-        CoffeeTable table = tableService.findById(tableId)
-            .orElseThrow(() -> new RuntimeException("Table not found with id: " + tableId));
-        order.setTable(table);
-        
+        User server = userService.findById(userDetails.getId())
+            .orElseThrow(() -> new RuntimeException("Server user not found"));
+
+        // Set the server and table for the order object
+        order.setServer(server);
+        if (tableId != null) {
+            CoffeeTable table = tableService.findById(tableId)
+                .orElseThrow(() -> new RuntimeException("Table not found with id: " + tableId));
+            order.setTable(table);
+        }
+
         // Create the order first
         Order savedOrder = orderService.createOrder(order);
-        
+
         // Add items to the order
         if (productIds != null && !productIds.isEmpty()) {
             for (int i = 0; i < productIds.size(); i++) {
-                Long productId = productIds.get(i);
-                int quantity = quantities.get(i);
-                String instruction = specialInstructions != null && i < specialInstructions.size() ? 
-                    specialInstructions.get(i) : "";
-                
-                orderService.addItemToOrder(savedOrder.getId(), productId, quantity, instruction);
+                 if (quantities != null && i < quantities.size()) {
+                    Long productId = productIds.get(i);
+                    int quantity = quantities.get(i);
+                    // Assuming no special instructions for now, can be added later
+                    orderService.addItemToOrder(savedOrder.getId(), productId, quantity, "");
+                 }
             }
         }
         
-        redirectAttributes.addFlashAttribute("success", 
-            "Order #" + savedOrder.getOrderNumber() + " created successfully!");
-        
-        return "redirect:/server/tables/" + tableId;
+        redirectAttributes.addFlashAttribute("success", "Order created successfully!");
+        return "redirect:/server/dashboard"; // Redirect to dashboard after creating order
     }
-    
+
     @GetMapping("/orders")
     public String viewOrders(@AuthenticationPrincipal UserDetailsImpl userDetails, Model model) {
         // Get current user
-        User currentUser = userService.findById(userDetails.getId())
-            .orElseThrow(() -> new RuntimeException("User not found"));
-        
+        Optional<User> currentUserOptional = userService.findById(userDetails.getId());
+         if (!currentUserOptional.isPresent()) {
+             return "redirect:/login?logout=true";
+         }
+         User currentUser = currentUserOptional.get();
+
         // Get orders created by this server
         List<Order> myOrders = orderService.findOrdersByServer(currentUser);
+         if (myOrders == null) myOrders = new ArrayList<>();
         
         // Get orders ready for delivery
         List<Order> readyOrders = orderService.findOrdersByStatus(OrderStatus.READY);
+         if (readyOrders == null) readyOrders = new ArrayList<>();
         
         model.addAttribute("myOrders", myOrders);
         model.addAttribute("readyOrders", readyOrders);
@@ -161,5 +174,30 @@ public class ServerController {
             "Order #" + order.getOrderNumber() + " marked as delivered!");
         
         return "redirect:/server/orders";
+    }
+
+    @PostMapping("/tables/{id}/assign")
+    public String assignTable(@PathVariable Long id, @AuthenticationPrincipal UserDetailsImpl userDetails,
+                              RedirectAttributes redirectAttributes) {
+        User server = userService.findById(userDetails.getId())
+            .orElseThrow(() -> new RuntimeException("Server user not found"));
+        tableService.assignServerToTable(id, server.getId());
+        redirectAttributes.addFlashAttribute("success", "Table assigned successfully!");
+        return "redirect:/server/tables";
+    }
+
+    @PostMapping("/tables/{id}/unassign")
+    public String unassignTable(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        tableService.assignServerToTable(id, null);
+        redirectAttributes.addFlashAttribute("success", "Table unassigned successfully!");
+        return "redirect:/server/tables";
+    }
+
+    @PostMapping("/tables/{id}/update-status")
+    public String updateTableStatus(@PathVariable Long id, @RequestParam("status") CoffeeTable.TableStatus status,
+                                    RedirectAttributes redirectAttributes) {
+        tableService.updateTableStatus(id, status);
+        redirectAttributes.addFlashAttribute("success", "Table status updated successfully!");
+        return "redirect:/server/tables";
     }
 }
